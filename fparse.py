@@ -2,6 +2,8 @@
 Mount Symbols
     Loads a list of valid symbols for the parser/lexer to use
     for validation.
+
+returns: List of valid symbols according to the fpp lang specification
 '''
 def mount_symbols():
     with open("./lib/symbols", 'r') as f:
@@ -13,6 +15,8 @@ def mount_symbols():
 '''
 Mount Reserved
     Loads a list of reserved words for the parser.
+
+returns: List of reserved words according to the fpp lang specification
 '''
 def mount_reserved():
     with open("./lib/reserved", 'r') as f:
@@ -25,6 +29,8 @@ def mount_reserved():
 Get Input
     Grabs the input file located in the main directory
     called "input.fpp".
+
+returns: the contents of an input fpp file.
 '''
 def get_input():
     with open("./port.fpp", 'r') as f:
@@ -153,8 +159,11 @@ class Tokenizer:
                 else:
                     self.buffer += self.input[i]
                     i += 1
+        # If something remains in the buffer at EOF then save it.
         if not self.isEmpty():
             self.save_buffer()
+
+        # Call parse(), doing this now for debugging purposes.
         self.parse()
     
     def parse(self):
@@ -166,6 +175,7 @@ class Tokenizer:
             # @Comments
             if self.tokens[i][0] == '@':
                 current_comment = self.tokens[i]
+
             # Ports
             if self.tokens[i] == 'port':
                 if self.tokens[i-1] == 'input':
@@ -176,7 +186,17 @@ class Tokenizer:
                 elif self.tokens[i-1] == 'output':
                     port = PortInstanceSpecifier(general_port_kind=(self.tokens[i-1]))
             i+=1
+
+            # Commands
+            # TODO: Command handling
+
+            # Telemetry
+            # TODO: Telemetry handling
+
+            # Events
+            # TODO: Event handling
     
+    # Prints all the tokens
     def toStringTokens(self):
         for token in self.tokens:
             print(token)
