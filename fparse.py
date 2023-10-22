@@ -57,7 +57,7 @@ Parameter
     FORMAT -> [ ref ] identifier : type-name
 '''
 class Parameter:
-    TYPE = 'parameter'
+    typeof = 'parameter'
     def __init__(self):
         self.identifier = ''
         self.type_name = ''
@@ -67,22 +67,21 @@ Port Class
     FORMAT -> port identifier [ ( param-list ) ] [ -> type-name ]
 '''
 class Port:
-    TYPE = 'port'
+    typeof = 'port'
     def __init__(self):
         self.identifier = ''
         self.param_list = [] # Type : <Parameter>
         self.type_name = ''
 
     def toString(self):
-        print(f"[{self.TYPE}] {self.identifier} {len(self.param_list)}xPort(s) -> <{self.type_name}>")
+        print(f"[{self.typeof}] {self.identifier} {len(self.param_list)}xPort(s) -> <{self.type_name}>")
 
 '''
 Port Instance Specifier Class
 
 '''
 class PortInstanceSpecifier:
-    VALID_INPUT_KIND = ['async', 'guarded', 'sync'] # Requires the input tag to follow it
-    VALID_OUTPUT_KIND = ['output']
+    typeof = 'port_instance_specifier'
     
     def __init__(self,general_port_kind='', identifier='', num_ports=-1, 
                  port_instance_type='', queue_full_behavior='',special_port_kind=None,
@@ -97,7 +96,7 @@ class PortInstanceSpecifier:
         self.description = '' # Description from "@" comments
         
     def toString(self):
-        print(f"[{self.TYPE}] {self.identifier} <{self.type_name}>")
+        print(f"[{self.typeof}] {self.identifier} <{self.general_port_kind}>")
 
 '''
 Tokenizer Class
@@ -170,7 +169,10 @@ class Tokenizer:
             # Ports
             if self.tokens[i] == 'port':
                 if self.tokens[i-1] == 'input':
-                    port = PortInstanceSpecifier(general_port_kind=(self.tokens[i-2]))
+                    port = PortInstanceSpecifier(general_port_kind=(self.tokens[i-2]),
+                                                 identifier=self.tokens[i+1][:-1])
+                    port.toString()
+                    
                 elif self.tokens[i-1] == 'output':
                     port = PortInstanceSpecifier(general_port_kind=(self.tokens[i-1]))
             i+=1
