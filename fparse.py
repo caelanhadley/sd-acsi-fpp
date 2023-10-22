@@ -30,8 +30,22 @@ def get_input():
     with open("./port.fpp", 'r') as f:
         return f.read()
 
+'''
+Throw Warning
+    Prints a warning message but does not stop execution.
+'''
+def throwWarning(message):
+    print(f"Warning: {message}")
+
+'''
+Throw Exception
+    Prints an error message and stops execution.
+'''
+def throwException(message):
+    raise Exception(f"Error: {message}")
+
 def main():
-    # Initializing vars
+    # Initializing vars (not using this yet)
     valid_symbols = mount_symbols()
     reserved_words = mount_reserved()
     
@@ -49,7 +63,7 @@ class Parameter:
         self.type_name = ''
 
 '''
-Port
+Port Class
     FORMAT -> port identifier [ ( param-list ) ] [ -> type-name ]
 '''
 class Port:
@@ -59,8 +73,11 @@ class Port:
         self.param_list = [] # Type : <Parameter>
         self.type_name = ''
 
+    def toString(self):
+        print(f"[{self.TYPE}] {self.identifier} {len(self.param_list)}xPort(s) -> <{self.type_name}>")
+
 '''
-Port Instance Specifier
+Port Instance Specifier Class
 
 '''
 class PortInstanceSpecifier:
@@ -78,9 +95,12 @@ class PortInstanceSpecifier:
         self.special_port_kind = special_port_kind
         self.priority = priority # Must be convertable to Integer
         self.description = '' # Description from "@" comments
+        
+    def toString(self):
+        print(f"[{self.TYPE}] {self.identifier} <{self.type_name}>")
 
 '''
-Tokenizer class
+Tokenizer Class
 
 '''
 class Tokenizer:
@@ -118,7 +138,8 @@ class Tokenizer:
                     # Parse until no more newlines or spaces
                     while self.input[i] == '\n' or self.input[i] == ' ':
                         i += 1
-                    self.tokens.append("\n")
+                    # Append null terminator token to signify end of line to the parser
+                    self.tokens.append('\x00')
                 # Handles Hashtag Comments
                 elif self.input[i] == '#' and i+1 < len(self.input):
                     while self.input[i] != '\n':
@@ -129,16 +150,24 @@ class Tokenizer:
                     while self.input[i] != '\n':
                         comment_buffer += self.input[i]
                         i += 1
+                    self.tokens.append(comment_buffer)
                 else:
                     self.buffer += self.input[i]
                     i += 1
         if not self.isEmpty():
             self.save_buffer()
-        self.printBuffer()
+        self.parse()
     
     def parse(self):
         i = 0
+        # Carries @ comments
+        current_comment = ''
+
         while i < len(self.tokens):
+            # @Comments
+            if self.tokens[i][0] == '@':
+                current_comment = self.tokens[i]
+            # Ports
             if self.tokens[i] == 'port':
                 if self.tokens[i-1] == 'input':
                     port = PortInstanceSpecifier(general_port_kind=(self.tokens[i-2]))
@@ -146,7 +175,7 @@ class Tokenizer:
                     port = PortInstanceSpecifier(general_port_kind=(self.tokens[i-1]))
             i+=1
     
-    def printBuffer(self):
+    def toStringTokens(self):
         for token in self.tokens:
             print(token)
 
