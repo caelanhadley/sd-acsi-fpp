@@ -1,0 +1,23 @@
+class Port:
+    # Regular ports
+    ASYNC_INPUT = 0
+    SYNC_INPUT = 1
+    GUARDED_INPUT = 2
+    OUTPUT = 3
+
+    STANDARD_PORTS = [ASYNC_INPUT, SYNC_INPUT, GUARDED_INPUT, OUTPUT]
+
+    # Special ports
+    COMMAND_RECV = 4
+    COMMAND_REG = 5
+    COMMAND_RESP = 6
+    EVENT = 7
+    PARAM_GET = 8
+    PARAM_SET = 9
+    TELEMETRY = 10
+    TEXT_EVENT = 11
+    TIME_GET = 12
+
+    SPECIAL_PORTS = [COMMAND_RECV,COMMAND_REG,COMMAND_RESP,
+                    EVENT,PARAM_GET,PARAM_SET,TELEMETRY,
+                    TEXT_EVENT,TIME_GET]

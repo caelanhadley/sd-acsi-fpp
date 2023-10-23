@@ -5,6 +5,7 @@ Author(s):
     - Caelan Hadley
 
 '''
+from lib.types import Port as PORT
 
 def main():
     # Tokenize File
@@ -12,7 +13,6 @@ def main():
     parser = Parser(tokens)
     component = parser.getComponent()
     component.toString()
-
 
 
 
