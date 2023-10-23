@@ -1,12 +1,7 @@
 module MathModule {
-
   @ Component for receiving and performing a math operation
-  queued component MathReceiver {
-
-    # ----------------------------------------------------------------------
-    # General ports
-    # ----------------------------------------------------------------------
-
+  queued component MathReceiver { 
+    
     @ Port for receiving the math operation
     async input port mathOpIn: OpRequest
 

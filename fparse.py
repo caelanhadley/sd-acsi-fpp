@@ -5,11 +5,12 @@ Author(s):
     - Caelan Hadley
 
 '''
-from lib.types import Num as num
+from lib.types import Number as num
 from lib.types import Port as port
-from lib.types import Command as command
+from lib.types import Command as cmd
 
 # num.contains(num.F32) -> True
+# cmd.hasKind(cmd.KIND_SYNC) -> True
 
 def main():
     # Tokenize File
@@ -110,11 +111,7 @@ class Command:
     
     # Object verificaiton (debating doing this for all objects that need to be verified - Caelan)
     def isValid(self):
-        valid_kinds = ['async', 'guarded', 'sync']
-        for kind in valid_kinds:
-            if self.kind == kind:
-                return True
-        return False
+        return cmd.hasKind(self.kind)
 
     def toString(self):
         return f"[{self.typeof}] {self.identifier} <{self.kind}>"
