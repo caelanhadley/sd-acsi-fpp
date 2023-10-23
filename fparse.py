@@ -7,10 +7,6 @@ Author(s):
 '''
 
 def main():
-    # Initializing vars (not using this yet)
-    valid_symbols = mount_symbols()
-    reserved_words = mount_reserved()
-    
     # Tokenize File
     tokens = Tokenizer(get_input()).tokenize()
     parser = Parser(tokens)
@@ -27,33 +23,6 @@ Functions
 '''
 
 '''
-Mount Symbols
-    Loads a list of valid symbols for the parser/lexer to use
-    for validation.
-
-returns: List of valid symbols according to the fpp lang specification
-'''
-def mount_symbols():
-    with open("./lib/symbols", 'r') as f:
-        valid_symbols = []
-        for symbol in f:
-            valid_symbols += symbol.replace('\n', '')
-        return valid_symbols
-
-'''
-Mount Reserved
-    Loads a list of reserved words for the parser.
-
-returns: List of reserved words according to the fpp lang specification
-'''
-def mount_reserved():
-    with open("./lib/reserved", 'r') as f:
-        valid_words = []
-        for symbol in f:
-            valid_words.append(symbol.replace('\n', ''))
-        return valid_words
-
-'''
 Get Input
     Grabs the input file located in the main directory
     called "input.fpp".
@@ -64,6 +33,7 @@ def get_input():
     with open("./input.fpp", 'r') as f:
         return f.read()
 
+# Valid symbols from the specification
 def get_symbols():
     return "()*+,-->./:;=[]\{\}"
 
