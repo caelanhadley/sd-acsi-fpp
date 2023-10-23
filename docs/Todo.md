@@ -22,6 +22,7 @@ I think a way of splitting the reserved words into categories associated with th
 ## FPrimePrime object template example
 ```python
 class FppObjectTemplate:
+    typeof = 'type goes here'
     def __init__(self, param=None):
         self.param = param
     
