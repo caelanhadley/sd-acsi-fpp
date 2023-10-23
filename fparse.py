@@ -5,7 +5,11 @@ Author(s):
     - Caelan Hadley
 
 '''
-from lib.types import Port as PORT
+from lib.types import Num as num
+from lib.types import Port as port
+from lib.types import Command as command
+
+# num.contains(num.F32) -> True
 
 def main():
     # Tokenize File
