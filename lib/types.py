@@ -1,3 +1,11 @@
+'''
+File: types.py
+Date: 10/22/2023
+Author(s):
+    - Caelan Hadley
+
+'''
+
 class Number:
     F32 = 'F32'
     F64 = 'F64'
