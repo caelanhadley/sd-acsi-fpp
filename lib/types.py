@@ -40,8 +40,16 @@ class Port:
                     TEXT_EVENT,TIME_GET]
 
     @staticmethod
-    def contains(value):
-        return (value in Port.STANDARD_PORTS or value in Port.SPECIAL_PORTS)
+    def hasStandardPort(standard_port):
+        return standard_port in Port.STANDARD_PORTS
+    
+    @staticmethod
+    def hasSpecialPort(special_port):
+        return special_port in Port.SPECIAL_PORTS
+
+    @staticmethod
+    def contains(port):
+        return (port in Port.STANDARD_PORTS or port in Port.SPECIAL_PORTS)
 
 class Command:
     KIND_SYNC = 'sync'
@@ -58,10 +66,14 @@ class Command:
         return (value in Command.KINDS)  # dummy check for any crossover need seperate to check only kind
 
 class Event:
+    # TODO: Put Event enums here
     pass
 
 class Telemetry:
+    # TODO: Put Telemetry enums here
     pass
 
+# (don't know if we need QueueFullBehavior yet)
 class QueueFullBehavior:
+    # TODO: Put enums here
     pass

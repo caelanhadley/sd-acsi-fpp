@@ -146,8 +146,8 @@ class Telemetry:
 class PortInstanceSpecifier:
     typeof = 'port_instance_specifier'
     
-    def __init__(self,general_port_kind='', identifier='', num_ports=-1, 
-                 port_instance_type='', queue_full_behavior='',special_port_kind=None,
+    def __init__(self,general_port_kind=None, identifier=None, num_ports=None, 
+                 port_instance_type=None, queue_full_behavior=None,special_port_kind=None,
                  priority=None, description=None):
         self.general_port_kind = general_port_kind # <async input, guarded input, sync input, guarded>
         self.identifier = identifier
