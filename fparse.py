@@ -1,4 +1,32 @@
 '''
+File: fparse.py
+Date: 10/22/2023
+Author(s):
+    - Caelan Hadley
+
+'''
+
+def main():
+    # Initializing vars (not using this yet)
+    valid_symbols = mount_symbols()
+    reserved_words = mount_reserved()
+    
+    # Tokenize File
+    tokens = Tokenizer(get_input()).tokenize()
+    parser = Parser(tokens)
+    component = parser.getComponent()
+    component.toString()
+
+
+
+
+'''
+----------------------------------------------------------------
+Functions
+----------------------------------------------------------------
+'''
+
+'''
 Mount Symbols
     Loads a list of valid symbols for the parser/lexer to use
     for validation.
@@ -62,14 +90,14 @@ Throw Exception
 def throwException(message):
     raise Exception(f"Error: {message}")
 
-def main():
-    # Initializing vars (not using this yet)
-    valid_symbols = mount_symbols()
-    reserved_words = mount_reserved()
-    
-    # Tokenize File
-    tokens = Tokenizer(get_input()).tokenize()
-    component = Parser(tokens).parse()
+
+
+
+'''
+----------------------------------------------------------------
+Classes
+----------------------------------------------------------------
+'''
 
 '''
 Parameter
@@ -265,6 +293,7 @@ class Parser:
         if not tokens: throwException("No tokens given to Parser.")
         self.tokens = tokens
         self.component = Component()
+        self.parse()
 
     def parse(self):
         i = 0
@@ -310,18 +339,18 @@ class Parser:
                     tlm = Telemetry(identifier=self.tokens[i+1][:-1], type_name=self.tokens[i+2])
                     self.component.addTelemetry(tlm)
             
-
             # Events
             if self.tokens[i] == 'event':
                 # Check for special events
                 if self.tokens[i+1] != 'port':
                     event = Event(identifier=rmsym(self.tokens[i+1]))
                     self.component.addEvent(event)
+
             i += 1
 
-
-        self.component.toString()
-
+    # Returns the Parser's Component
+    def getComponent(self):
+        return self.component
     # Prints all the tokens
     def toStringTokens(self):
         for token in self.tokens:
