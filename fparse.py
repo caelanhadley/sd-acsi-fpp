@@ -33,8 +33,20 @@ Get Input
 returns: the contents of an input fpp file.
 '''
 def get_input():
-    with open("./port.fpp", 'r') as f:
+    with open("./input.fpp", 'r') as f:
         return f.read()
+
+def get_symbols():
+    return "()*+,-->./:;=[]\{\}"
+
+# Removes symbols from given text
+def rmsym(text):
+    buf = ''
+    for c in text:
+        if c in get_symbols():
+            continue
+        buf += c
+    return buf
 
 '''
 Throw Warning
@@ -56,7 +68,8 @@ def main():
     reserved_words = mount_reserved()
     
     # Tokenize File
-    tokenizer = Tokenizer(get_input())
+    tokens = Tokenizer(get_input()).tokenize()
+    component = Parser(tokens).parse()
 
 '''
 Parameter
@@ -82,16 +95,61 @@ class Port:
     def toString(self):
         print(f"[{self.typeof}] {self.identifier} {len(self.param_list)}xPort(s) -> <{self.type_name}>")
 
-'''
-Port Instance Specifier Class
+class Command:
+    typeof = 'command'
 
-'''
+    def __init__(self, kind=None, identifier=None, param_list=None, opcode=None, priority=None, queue_full_behavior=None):
+        self.kind = kind
+        self.identifier = identifier
+        self.param_list = param_list
+        self.opcode = opcode
+        self.priority = priority
+        self.queue_full_behavior = queue_full_behavior
+    
+    # Object verificaiton (debating doing this for all objects that need to be verified - Caelan)
+    def isValid(self):
+        valid_kinds = ['async', 'guarded', 'sync']
+        for kind in valid_kinds:
+            if self.kind == kind:
+                return True
+        return False
+
+    def toString(self):
+        return f"[{self.typeof}] {self.identifier} <{self.kind}>"
+
+class Event:
+    typeof = 'event'
+    def __init__(self, identifier=None, param_list=None, severity=None, id=None, format=None, throttle=None):
+        self.identifier = identifier
+        self.param_list = param_list
+        self.severity = severity
+        self.id = id
+        self.format = format
+        self.throttle = throttle
+
+    def toString(self):
+        return f"[{self.typeof}] {self.identifier}"
+
+class Telemetry:
+    typeof = 'telemetry'
+    def __init__(self, identifier=None, type_name=None, id=None, update=None, format=None, low=None, high=None):
+        self.identifier = identifier
+        self.type_name = type_name
+        self.id = id
+        self.update = update
+        self.format = format
+        self.low = low
+        self.high = high
+    
+    def toString(self):
+        return f"[{self.typeof}] {self.identifier} <{self.type_name}>"
+
 class PortInstanceSpecifier:
     typeof = 'port_instance_specifier'
     
     def __init__(self,general_port_kind='', identifier='', num_ports=-1, 
                  port_instance_type='', queue_full_behavior='',special_port_kind=None,
-                 priority=None):
+                 priority=None, description=None):
         self.general_port_kind = general_port_kind # <async input, guarded input, sync input, guarded>
         self.identifier = identifier
         self.num_ports = num_ports
@@ -99,22 +157,54 @@ class PortInstanceSpecifier:
         self.queue_full_behavior = queue_full_behavior # <assert, block, drop>
         self.special_port_kind = special_port_kind
         self.priority = priority # Must be convertable to Integer
-        self.description = '' # Description from "@" comments
+        self.description = description # Description from "@" comments
         
     def toString(self):
-        print(f"[{self.typeof}] {self.identifier} <{self.general_port_kind}>")
+        return f"[port] {self.identifier} <{self.general_port_kind}>"
 
-'''
-Tokenizer Class
+class Component:
+    def __init__(self, kind=None, identifier=None, ports=[], commands=[], events=[], telemetry=[]):
+        self.kind = kind
+        self.identifier = identifier
+        self.ports = ports
+        self.commands = commands
+        self.events = events
+        self.telemetry = telemetry
+    
+    # Use this to add ports try not to modify ports directly
+    def addPort(self, port):
+        if type(port) != PortInstanceSpecifier: throwException()
+        self.ports.append(port)
+    
+    def addCommand(self, command):
+        if type(command) != Command: throwException()
+        self.commands.append(command)
 
-'''
+    def addEvent(self, event):
+        if type(event) != Event: throwException()
+        self.events.append(event)
+    
+    def addTelemetry(self, telemetry):
+        if type(telemetry) != Telemetry: throwException()
+        self.telemetry.append(telemetry)
+    
+    def toString(self):
+        print(f"Component ({self.identifier})")
+        for port in self.ports:
+            print('- ' + port.toString())
+        for command in self.commands:
+            print('- ' + command.toString())
+        for telemetry in self.telemetry:
+            print('- ' + telemetry.toString())
+        for event in self.events:
+            print('- ' + event.toString())
+
 class Tokenizer:
     def __init__(self, input):
         self.input = input
         self.tokens = []
         self.buffer = ''
-        self.tokenize()
-    
+
     # Saves the contents of the buffer
     def save_buffer(self):
         self.tokens.append(self.buffer)
@@ -163,9 +253,19 @@ class Tokenizer:
         if not self.isEmpty():
             self.save_buffer()
 
-        # Call parse(), doing this now for debugging purposes.
-        self.parse()
+        return self.tokens
     
+    # Prints all the tokens
+    def toStringTokens(self):
+        for token in self.tokens:
+            print(token)
+
+class Parser:
+    def __init__(self, tokens=None):
+        if not tokens: throwException("No tokens given to Parser.")
+        self.tokens = tokens
+        self.component = Component()
+
     def parse(self):
         i = 0
         # Carries @ comments
@@ -176,32 +276,56 @@ class Tokenizer:
             if self.tokens[i][0] == '@':
                 current_comment = self.tokens[i]
 
+            # Component
+            if self.tokens[i] == 'component':
+                self.component.kind = self.tokens[i-1]
+                self.component.identifier = self.tokens[i+1]
+
             # Ports
             if self.tokens[i] == 'port':
                 if self.tokens[i-1] == 'input':
                     port = PortInstanceSpecifier(general_port_kind=(self.tokens[i-2]),
-                                                 identifier=self.tokens[i+1][:-1])
-                    port.toString()
+                                                 identifier=self.tokens[i+1][:-1],
+                                                 description=current_comment)
+                    current_comment = ''
+                    self.component.addPort(port)
                     
                 elif self.tokens[i-1] == 'output':
-                    port = PortInstanceSpecifier(general_port_kind=(self.tokens[i-1]))
-            i+=1
-
+                    port = PortInstanceSpecifier(general_port_kind=(self.tokens[i-1]),
+                                                 identifier=self.tokens[i+1][:-1],
+                                                 description=current_comment)
+                    current_comment = ''
+                    self.component.addPort(port)
+                    
             # Commands
-            # TODO: Command handling
+            if self.tokens[i] == 'command':
+                cmd = Command(kind=self.tokens[i-1], identifier=self.tokens[i+1])
+                if cmd.isValid():
+                    self.component.addCommand(cmd)
 
             # Telemetry
-            # TODO: Telemetry handling
+            if self.tokens[i] == 'telemetry':
+                # Check for special telemetry
+                if self.tokens[i+1] != 'port':
+                    tlm = Telemetry(identifier=self.tokens[i+1][:-1], type_name=self.tokens[i+2])
+                    self.component.addTelemetry(tlm)
+            
 
             # Events
-            # TODO: Event handling
-    
+            if self.tokens[i] == 'event':
+                # Check for special events
+                if self.tokens[i+1] != 'port':
+                    event = Event(identifier=rmsym(self.tokens[i+1]))
+                    self.component.addEvent(event)
+            i += 1
+
+
+        self.component.toString()
+
     # Prints all the tokens
     def toStringTokens(self):
         for token in self.tokens:
             print(token)
 
-
-# Init
 if __name__ == "__main__":
     main()
