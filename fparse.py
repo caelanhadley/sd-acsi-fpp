@@ -159,6 +159,9 @@ class PortInstanceSpecifier:
         self.description = description # Description from "@" comments
         
     def toString(self):
+        # Return statement depends on the port kind
+        if self.general_port_kind == None:
+            return f"[port] {self.identifier} <{self.special_port_kind}>"
         return f"[port] {self.identifier} <{self.general_port_kind}>"
 
 class Component:
@@ -224,6 +227,7 @@ class Tokenizer:
             if self.input[i] == ' ' and not self.isEmpty():
                 self.save_buffer()
                 i += 1
+            # If current input is not a space, check for conditions
             else:
                 if self.input[i] == '\n' and i+1 < len(self.input):
                     # If there is something in the buffer save it
@@ -245,6 +249,7 @@ class Tokenizer:
                         comment_buffer += self.input[i]
                         i += 1
                     self.tokens.append(comment_buffer)
+                # If the current input is a word, save it in the buffer
                 else:
                     self.buffer += self.input[i]
                     i += 1
@@ -293,6 +298,31 @@ class Parser:
                 elif self.tokens[i-1] == 'output':
                     port = PortInstanceSpecifier(general_port_kind=(self.tokens[i-1]),
                                                  identifier=self.tokens[i+1][:-1],
+                                                 description=current_comment)
+                    current_comment = ''
+                    self.component.addPort(port)
+                
+                # Special port 'event'
+                elif self.tokens[i-1] == 'event':
+                    port = PortInstanceSpecifier(special_port_kind=(self.tokens[i-1]),
+                                                 identifier=self.tokens[i+1],
+                                                 description=current_comment)
+                    current_comment = ''
+                    self.component.addPort(port)
+                    
+                # Special port 'telemetry' 
+                elif self.tokens[i-1] == 'telemetry':
+                    port = PortInstanceSpecifier(special_port_kind=(self.tokens[i-1]),
+                                                 identifier=self.tokens[i+1],
+                                                 description=current_comment)
+                    current_comment = ''
+                    self.component.addPort(port)
+                    
+                # All other special ports 
+                else:
+                    port = PortInstanceSpecifier(special_port_kind=(
+                                                 ' '.join(map(str, self.tokens[i-2:i]))),
+                                                 identifier=self.tokens[i+1],
                                                  description=current_comment)
                     current_comment = ''
                     self.component.addPort(port)
