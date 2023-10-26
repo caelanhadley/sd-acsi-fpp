@@ -25,10 +25,12 @@ class Number:
         return value in Number.NUM_TYPES
 
 class Port:
+    TYPE = 'port_instance_specifier'
+
     # Regular ports
-    SYNC_INPUT =    'sync'
-    ASYNC_INPUT =   'async'
-    GUARDED_INPUT = 'guarded'
+    SYNC_INPUT =    'sync input'
+    ASYNC_INPUT =   'async input'
+    GUARDED_INPUT = 'guarded input'
     OUTPUT =        'output'
 
     # Special ports
@@ -60,6 +62,8 @@ class Port:
         return (port in Port.STANDARD_PORTS or port in Port.SPECIAL_PORTS)
 
 class Command:
+    TYPE = 'command'
+
     KIND_SYNC = 'sync'
     KIND_ASYNC = 'async'
     KIND_GUARDED = 'guarded'
@@ -74,10 +78,12 @@ class Command:
         return (value in Command.KINDS)  # dummy check for any crossover need seperate to check only kind
 
 class Event:
+    TYPE = 'event'
     # TODO: Put Event enums here
     pass
 
 class Telemetry:
+    TYPE = 'telemetry'
     # TODO: Put Telemetry enums here
     pass
 

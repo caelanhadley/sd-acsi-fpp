@@ -8,6 +8,8 @@ Author(s):
 from lib.types import Number as num
 from lib.types import Port as port
 from lib.types import Command as cmd
+from lib.types import Event as event
+from lib.types import Telemetry as tlm
 
 # num.contains(num.F32) -> True
 # cmd.hasKind(cmd.KIND_SYNC) -> True
@@ -95,19 +97,27 @@ class Port:
         self.param_list = [] # Type : <Parameter>
         self.type_name = ''
 
+    def isValid(self):
+        if self.identifier:
+            return True
+        # TODO: ADD VERIFICATION SUPPORT
+        return False
+
     def toString(self):
         print(f"[{self.typeof}] {self.identifier} {len(self.param_list)}xPort(s) -> <{self.type_name}>")
 
 class Command:
     typeof = 'command'
 
-    def __init__(self, kind=None, identifier=None, param_list=None, opcode=None, priority=None, queue_full_behavior=None):
+    def __init__(self, kind=None, identifier=None, param_list=None, 
+                 opcode=None, priority=None, queue_full_behavior=None, description=None):
         self.kind = kind
         self.identifier = identifier
         self.param_list = param_list
         self.opcode = opcode
         self.priority = priority
         self.queue_full_behavior = queue_full_behavior
+        self.description = description
     
     # Object verificaiton (debating doing this for all objects that need to be verified - Caelan)
     def isValid(self):
@@ -118,20 +128,29 @@ class Command:
 
 class Event:
     typeof = 'event'
-    def __init__(self, identifier=None, param_list=None, severity=None, id=None, format=None, throttle=None):
+    def __init__(self, identifier=None, param_list=None, severity=None, id=None, 
+                 format=None, throttle=None, description=None):
         self.identifier = identifier
         self.param_list = param_list
         self.severity = severity
         self.id = id
         self.format = format
         self.throttle = throttle
+        self.description = description
+
+    def isValid(self):
+        if self.identifier:
+            return True
+        # TODO: ADD VERIFICATION SUPPORT
+        return False
 
     def toString(self):
         return f"[{self.typeof}] {self.identifier}"
 
 class Telemetry:
     typeof = 'telemetry'
-    def __init__(self, identifier=None, type_name=None, id=None, update=None, format=None, low=None, high=None):
+    def __init__(self, identifier=None, type_name=None, id=None, update=None, 
+                 format=None, low=None, high=None, description=None):
         self.identifier = identifier
         self.type_name = type_name
         self.id = id
@@ -139,6 +158,13 @@ class Telemetry:
         self.format = format
         self.low = low
         self.high = high
+        self.description = description
+    
+    def isValid(self):
+        if self.identifier:
+            return True
+        # TODO: ADD VERIFICATION SUPPORT
+        return False
     
     def toString(self):
         return f"[{self.typeof}] {self.identifier} <{self.type_name}>"
@@ -157,11 +183,23 @@ class PortInstanceSpecifier:
         self.special_port_kind = special_port_kind
         self.priority = priority # Must be convertable to Integer
         self.description = description # Description from "@" comments
+
+    def isValid(self):
+        # Checks if this port has a valid general or special port
+        if port.contains(self.general_port_kind) or port.contains(self.special_port_kind):
+            # If it has one make sure there is not both a special and general port
+            if port.hasSpecialPort(self.special_port_kind):
+                if self.special_port_kind and not self.general_port_kind:
+                    return True
+            if port.hasStandardPort(self.general_port_kind):
+                if self.general_port_kind and not self.special_port_kind:
+                    return True
+        return False
         
     def toString(self):
         # Return statement depends on the port kind
         if self.general_port_kind == None:
-            return f"[port] {self.identifier} <{self.special_port_kind}>"
+            return f"[s-port] {self.identifier} <{self.special_port_kind}>"
         return f"[port] {self.identifier} <{self.general_port_kind}>"
 
 class Component:
@@ -190,10 +228,16 @@ class Component:
         if type(telemetry) != Telemetry: throwException()
         self.telemetry.append(telemetry)
     
+    def isValid(self):
+        if self.identifier:
+            return True
+        # TODO: ADD VERIFICATION SUPPORT
+        return False
+    
     def toString(self):
         print(f"Component ({self.identifier})")
         for port in self.ports:
-            print('- ' + port.toString())
+            print('- ' + port.toString() + f" - {port.description}")
         for command in self.commands:
             print('- ' + command.toString())
         for telemetry in self.telemetry:
@@ -269,17 +313,54 @@ class Parser:
         if not tokens: throwException("No tokens given to Parser.")
         self.tokens = tokens
         self.component = Component()
+        # Carries @ comments
+        self.current_comment = '' # Moved to a class variable to allow class methods to clear the comment buffer.
         self.parse()
+    
+    '''
+    Add-if-Valid
+        This method calls the isValid() method in each passed object to make sure
+        the object has identified itself as valid. Once the object has verified
+        itself, it is added though its respective method in the component class.
+        If the object is not recognized as a type that can be passed to a
+        component it will throw a Warning. Objects that do not have an isValid()
+        method will cause an Error.
+    '''
+    def addValid(self, obj):
+        try:
+            if obj.isValid():
+                objtype = obj.typeof
+                if objtype == port.TYPE:
+                    self.component.addPort(obj)
+                elif objtype == cmd.TYPE:
+                    self.component.addCommand(obj)
+                elif objtype == event.TYPE:
+                    self.component.addEvent(obj)
+                elif objtype == tlm.TYPE:
+                    self.component.addTelemetry(obj)
+                else:
+                    throwWarning(f"Object is valid but <{objtype}> is not a recognized type.")
+                    return
+            else:
+                throwWarning(f"Object '{obj.identifier}' is not a valid <{obj.typeof}>!")
 
+            self.current_comment = ''
+        except:
+            throwException("Invalid Port. Could be object lacks isValid() method or type does not match <type>.TYPE")
+
+    '''
+    Parse
+        Processes the tokens generated by the Tokenizer into python classes.
+        Objects converted into classes are then stored in this parsers associated
+        component object.
+    '''
     def parse(self):
         i = 0
-        # Carries @ comments
-        current_comment = ''
 
         while i < len(self.tokens):
             # @Comments
             if self.tokens[i][0] == '@':
-                current_comment = self.tokens[i]
+               self.current_comment = self.tokens[i][1:].strip()
 
             # Component
             if self.tokens[i] == 'component':
@@ -288,64 +369,61 @@ class Parser:
 
             # Ports
             if self.tokens[i] == 'port':
+                # Standard port 'input'
                 if self.tokens[i-1] == 'input':
-                    port = PortInstanceSpecifier(general_port_kind=(self.tokens[i-2]),
-                                                 identifier=self.tokens[i+1][:-1],
-                                                 description=current_comment)
-                    current_comment = ''
-                    self.component.addPort(port)
-                    
+                    self.addValid(PortInstanceSpecifier(general_port_kind=(' '.join(map(str, self.tokens[i-2:i]))),
+                                                 identifier=self.tokens[i+1],
+                                                 description=self.current_comment))
+                    i += 1
+                    continue
+                # Standard port 'output'
                 elif self.tokens[i-1] == 'output':
-                    port = PortInstanceSpecifier(general_port_kind=(self.tokens[i-1]),
-                                                 identifier=self.tokens[i+1][:-1],
-                                                 description=current_comment)
-                    current_comment = ''
-                    self.component.addPort(port)
-                
+                    self.addValid(PortInstanceSpecifier(general_port_kind=(self.tokens[i-1]),
+                                                 identifier=self.tokens[i+1],
+                                                 description=self.current_comment))
+                    i += 1
+                    continue
                 # Special port 'event'
                 elif self.tokens[i-1] == 'event':
-                    port = PortInstanceSpecifier(special_port_kind=(self.tokens[i-1]),
+                    self.addValid(PortInstanceSpecifier(special_port_kind=(self.tokens[i-1]),
                                                  identifier=self.tokens[i+1],
-                                                 description=current_comment)
-                    current_comment = ''
-                    self.component.addPort(port)
-                    
+                                                 description=self.current_comment))
+                    i += 1
+                    continue
                 # Special port 'telemetry' 
                 elif self.tokens[i-1] == 'telemetry':
-                    port = PortInstanceSpecifier(special_port_kind=(self.tokens[i-1]),
+                    self.addValid(PortInstanceSpecifier(special_port_kind=(self.tokens[i-1]),
                                                  identifier=self.tokens[i+1],
-                                                 description=current_comment)
-                    current_comment = ''
-                    self.component.addPort(port)
-                    
-                # All other special ports 
+                                                 description=self.current_comment))
+                    i += 1
+                    continue
+                # Special port Other
                 else:
-                    port = PortInstanceSpecifier(special_port_kind=(
+                    self.addValid(PortInstanceSpecifier(special_port_kind=(
                                                  ' '.join(map(str, self.tokens[i-2:i]))),
                                                  identifier=self.tokens[i+1],
-                                                 description=current_comment)
-                    current_comment = ''
-                    self.component.addPort(port)
+                                                 description=self.current_comment))
+                    i += 1
+                    continue
                     
             # Commands
             if self.tokens[i] == 'command':
-                cmd = Command(kind=self.tokens[i-1], identifier=self.tokens[i+1])
-                if cmd.isValid():
-                    self.component.addCommand(cmd)
+                # If there is \x00 before that means that it is a special port not a command
+                if self.tokens[i-1] != '\x00':
+                    self.addValid(Command(kind=self.tokens[i-1], 
+                                        identifier=self.tokens[i+1], 
+                                        description=self.current_comment))
 
             # Telemetry
             if self.tokens[i] == 'telemetry':
-                # Check for special telemetry
-                if self.tokens[i+1] != 'port':
-                    tlm = Telemetry(identifier=self.tokens[i+1][:-1], type_name=self.tokens[i+2])
-                    self.component.addTelemetry(tlm)
+                self.addValid(Telemetry(identifier=self.tokens[i+1][:-1], 
+                                        type_name=self.tokens[i+2],
+                                        description=self.current_comment))
             
             # Events
             if self.tokens[i] == 'event':
-                # Check for special events
-                if self.tokens[i+1] != 'port':
-                    event = Event(identifier=rmsym(self.tokens[i+1]))
-                    self.component.addEvent(event)
+                self.addValid(Event(identifier=rmsym(self.tokens[i+1]),
+                                    description=self.current_comment))
 
             i += 1
 
